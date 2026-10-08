@@ -38,6 +38,13 @@ for line in "${META[@]}"; do
         -filter_complex "[0:v]$vf[v]" -map "[v]" -map 1:a \
         -c:v libx264 -preset medium -crf 18 -c:a aac -b:a 192k -ar 48000 -t $DUR "$dst"
     fi
+  elif [[ -f "$ROOT/stills/clip-$n.png" ]]; then
+    echo "Clip $n : image stills/clip-$n.png → zoom lent"
+    # Image agrandie puis zoom progressif de 100 % à 112 % sur 8 s, centré.
+    ffmpeg -v error -y -loop 1 -i "$ROOT/stills/clip-$n.png" -f lavfi -t $DUR -i anullsrc=r=48000:cl=stereo \
+      -filter_complex "[0:v]scale=$((W*2)):$((H*2)):force_original_aspect_ratio=increase,crop=$((W*2)):$((H*2)),\
+zoompan=z='1+0.12*on/($DUR*$FPS)':x='iw/2-iw/zoom/2':y='ih/2-ih/zoom/2':d=$((DUR*FPS)):s=${W}x${H}:fps=$FPS,setsar=1,format=yuv420p[v]" \
+      -map "[v]" -map 1:a -c:v libx264 -preset medium -crf 18 -c:a aac -b:a 192k -ar 48000 -t $DUR "$dst"
   else
     echo "Clip $n : rush absent → carton d'animatique"
     # Textes passés par fichier pour ne pas avoir à échapper « ' », « : » ou « % ».

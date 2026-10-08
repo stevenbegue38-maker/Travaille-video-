@@ -15,11 +15,11 @@ Spot de 64 secondes, 8 clips de 8 s générés par IA vidéo (prompts en anglais
 
 ## Montage
 
-1. Générez chaque clip avec son prompt et déposez le fichier dans `clips/` sous le nom `clip-01.mp4` … `clip-08.mp4`.
+1. Pour chaque plan, fournissez soit une vidéo `clips/clip-XX.mp4` (Sora, Veo…), soit une image `stills/clip-XX.png`. Les images peuvent être générées automatiquement avec Nano Banana : `GEMINI_API_KEY=… python3 scripts/generate_stills.py` (l'image du plan 1 sert de référence pour garder le même personnage).
 2. Lancez `./scripts/montage.sh`.
 3. Le spot est écrit dans `output/spot-le-cocon.mp4` (1920×1080, 24 i/s, H.264 + AAC, 64 s).
 
-Si un rush manque, le script le remplace par un carton (animatique) indiquant le numéro, le titre et le timecode du plan : on peut donc monter et vérifier le rythme avant d'avoir tous les clips. Chaque rush est recadré au format 16:9, ramené à 8 s exactement, et son son est normalisé (fondu de 0,15 s en entrée et en sortie pour éviter les clics aux coupes). Un rush sans piste audio reçoit un silence. Le spot commence par un fondu depuis le noir et se termine par un fondu au noir.
+Une image est animée par un zoom lent de 8 s. Si ni vidéo ni image n'existe, le script le remplace par un carton (animatique) indiquant le numéro, le titre et le timecode du plan : on peut donc monter et vérifier le rythme avant d'avoir tous les clips. Chaque rush est recadré au format 16:9, ramené à 8 s exactement, et son son est normalisé (fondu de 0,15 s en entrée et en sortie pour éviter les clics aux coupes). Un rush sans piste audio reçoit un silence. Le spot commence par un fondu depuis le noir et se termine par un fondu au noir.
 
 Après modification de `prompts/clips.json`, lancez `python3 scripts/build_prompts.py` pour régénérer les fichiers `.txt` et ce README.
 
