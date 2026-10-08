@@ -47,9 +47,7 @@ for c in sorted(clips, key=lambda c: c["clip"]):
     if c["clip"] not in wanted:
         continue
     n = f"{c['clip']:02d}"
-    # Le prompt vidéo décrit 8 s d'action ; on demande l'image clé du plan.
-    prompt = ("Single cinematic film still, 16:9, photorealistic, key frame of this commercial shot "
-              "(ignore sound and camera-move directions): " + c["prompt"])
+    prompt = c["still"]
     use_ref = c["clip"] != 1 and ref.exists() and c["clip"] != 2
     if use_ref:
         prompt = "Keep exactly the same young man as in the reference image (face, curly brown hair, light grey hoodie). " + prompt

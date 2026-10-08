@@ -8,21 +8,21 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CLIPS="$ROOT/clips"
 OUT="$ROOT/output"
 WORK="$OUT/.work"
-FONT="${FONT:-/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf}"
+# Police : variable FONT, sinon la première trouvée (Linux puis macOS).
+if [[ -z "${FONT:-}" ]]; then
+  for f in /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf /System/Library/Fonts/Supplemental/Arial.ttf /Library/Fonts/Arial.ttf; do
+    [[ -f "$f" ]] && FONT="$f" && break
+  done
+fi
+: "${FONT:?Aucune police trouvée : lancez FONT=/chemin/police.ttf ./scripts/montage.sh}"
 W=1920 H=1080 FPS=24 DUR=8 AF=0.15 TOTAL=64
 
 mkdir -p "$WORK"
 rm -f "$WORK"/*.mp4 "$WORK"/*.txt
 
-# Titres et timecodes lus depuis prompts/clips.json (une ligne « n|start|title »).
-mapfile -t META < <(python3 -c '
-import json,sys
-for c in json.load(open(sys.argv[1], encoding="utf-8")):
-    print("%02d|%s|%s" % (c["clip"], c["start"], c["title"]))
-' "$ROOT/prompts/clips.json")
-
-for line in "${META[@]}"; do
-  IFS='|' read -r n start title <<<"$line"
+# Titres, timecodes et sous-titres lus depuis prompts/clips.json (une ligne « n|start|title|caption »).
+# Lecture sur le descripteur 3 (sans mapfile) pour fonctionner avec le bash 3.2 de macOS.
+while IFS='|' read -r n start title caption <&3; do
   src="$CLIPS/clip-$n.mp4"
   dst="$WORK/clip-$n.mp4"
   if [[ -f "$src" ]]; then
@@ -57,8 +57,20 @@ drawtext=fontfile=$FONT:textfile=$WORK/t2.txt:fontcolor=white:fontsize=96:x=(w-t
 drawtext=fontfile=$FONT:textfile=$WORK/t3.txt:fontcolor=0x8a939c:fontsize=34:x=(w-tw)/2:y=h/2+110,format=yuv420p" \
       -c:v libx264 -preset medium -crf 18 -c:a aac -b:a 192k -ar 48000 -t $DUR "$dst"
   fi
+  if [[ -n "$caption" ]]; then
+    echo "Clip $n : sous-titre « $caption »"
+    printf '%s' "$caption" > "$WORK/cap.txt"
+    ffmpeg -v error -y -i "$dst" \
+      -vf "drawtext=fontfile=$FONT:textfile=$WORK/cap.txt:fontcolor=white:fontsize=72:borderw=3:bordercolor=black@0.6:x=(w-tw)/2:y=h-th-120:alpha='min(1,max(0,(t-3)/0.5))'" \
+      -c:v libx264 -preset medium -crf 18 -c:a copy "$WORK/cap.mp4"
+    mv "$WORK/cap.mp4" "$dst"
+  fi
   echo "file '$dst'" >> "$WORK/list.txt"
-done
+done 3< <(python3 -c '
+import json,sys
+for c in json.load(open(sys.argv[1], encoding="utf-8")):
+    print("%02d|%s|%s|%s" % (c["clip"], c["start"], c["title"], c.get("caption", "")))
+' "$ROOT/prompts/clips.json")
 
 # Assemblage en coupes franches, fondu depuis le noir au début et vers le noir à la fin.
 ffmpeg -v error -y -f concat -safe 0 -i "$WORK/list.txt" \
